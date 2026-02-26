@@ -1,0 +1,88 @@
+{
+  "doc_id": "57dc70fde870451585434215e9aaaa7a",
+  "document_type": "DIVIDEND",
+  "company_name": {
+    "value": "ARIADNE AUSTRALIA LIMITED",
+    "evidence": {
+      "page": 1,
+      "snippet": "ividend / distribution 1 / 5 Announcement Summary Entity name ARIADNE AUSTRALIA LIMITED Security on which the Distribution will be paid A"
+    },
+    "confidence": 0.85
+  },
+  "ticker": {
+    "value": "ARA",
+    "evidence": {
+      "page": 1,
+      "snippet": "mber Type ABN Registration Number 50010474067 1.3 ASX issuer code ARA 1.4 The announcement is 1.5 Date of this announce"
+    },
+    "confidence": 0.85
+  },
+  "isin": {
+    "value": null,
+    "evidence": null,
+    "confidence": 0.0
+  },
+  "ex_date": {
+    "value": "2026-03-13",
+    "evidence": {
+      "page": 1,
+      "snippet": "ment 26/2/2026 Distribution Amount AUD 0.00500000 Ex Date 13/3/2026 Record Date 16/3/2026 Payment Date 26/3/2026 Refe"
+    },
+    "confidence": 0.85
+  },
+  "record_date": {
+    "value": "2026-03-16",
+    "evidence": {
+      "page": 1,
+      "snippet": "tribution Amount AUD 0.00500000 Ex Date 13/3/2026 Record Date 16/3/2026 Payment Date 26/3/2026 Refer to below for full de"
+    },
+    "confidence": 0.85
+  },
+  "payment_date": {
+    "value": "2026-03-26",
+    "evidence": {
+      "page": 1,
+      "snippet": ".00500000 Ex Date 13/3/2026 Record Date 16/3/2026 Payment Date 26/3/2026 Refer to below for full details of the announceme"
+    },
+    "confidence": 0.85
+  },
+  "dividend_per_share": {
+    "value": 0.00125,
+    "evidence": {
+      "page": 1,
+      "snippet": "30.0000 %\n3a.4 ordinary dividend/distribution franked amount per\n+security\naud 0.00125000\n3a.5 percentage amount of dividend which is unfranked\n75.0000 %\n3a.6"
+    },
+    "confidence": 0.9
+  },
+  "currency": {
+    "value": "AUD",
+    "evidence": {
+      "page": 1,
+      "snippet": "f this announcement 26/2/2026 Distribution Amount AUD 0.00500000 Ex Date 13/3/2026 Record Date 16/3/2026"
+    },
+    "confidence": 0.95
+  },
+  "franking_percentage": {
+    "value": 25.0,
+    "evidence": {
+      "page": 1,
+      "snippet": "rdinary dividend/distribution fully franked? 3A.3 Percentage of ordinary dividend/distribution that is franked 25.0000 % 3A.3a Applicable corporate tax rate for franking"
+    },
+    "confidence": 0.9
+  },
+  "ratio": {
+    "value": null,
+    "evidence": null,
+    "confidence": 0.0
+  },
+  "announcement_date": {
+    "value": "2026-02-26",
+    "evidence": {
+      "page": 1,
+      "snippet": "ARY FULLY PAID Announcement Type New announcement Date of this announcement 26/2/2026 Distribution Amount AUD 0.00500000 Ex Date 13/3/2"
+    },
+    "confidence": 0.85
+  },
+  "overall_confidence": 0.8722222222222222,
+  "warnings": []
+}

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PDF Folder Browser</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        :root {
+            --bg: #f3efe7;
+            --card: #fffaf1;
+            --ink: #1f2a1f;
+            --muted: #5d695f;
+            --line: #d6c9b4;
+            --accent: #0f6d57;
+            --accent-strong: #0a4f3f;
+            --shadow: 0 10px 25px rgba(16, 41, 34, 0.08);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 10% 10%, #efe3cf 0%, transparent 45%),
+                radial-gradient(circle at 90% 0%, #d9efe5 0%, transparent 40%),
+                var(--bg);
+            font-family: "Avenir Next", Avenir, "Trebuchet MS", sans-serif;
+        }
+        .wrap {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 24px 16px 48px;
+        }
+        h1 {
+            margin: 0 0 8px;
+            font-size: clamp(1.4rem, 2.2vw, 2rem);
+            letter-spacing: 0.01em;
+        }
+        .subtitle {
+            margin: 0 0 20px;
+            color: var(--muted);
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+        }
+        .search-card {
+            padding: 14px;
+            margin-bottom: 18px;
+        }
+        form {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+        }
+        input[type="text"] {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 10px 12px;
+            background: #fffefb;
+            color: var(--ink);
+            font-size: 0.95rem;
+        }
+        button {
+            border: 1px solid var(--accent);
+            background: var(--accent);
+            color: #f7fff9;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        button:hover { background: var(--accent-strong); }
+        .section-title {
+            margin: 20px 0 10px;
+            font-size: 1.05rem;
+        }
+        .meta {
+            margin: 0 0 10px;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+        .table-wrap {
+            overflow-x: auto;
+            border-radius: 14px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 980px;
+            font-size: 0.92rem;
+            background: var(--card);
+        }
+        th, td {
+            border: 1px solid var(--line);
+            padding: 8px 9px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #e7f1ec;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .json-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-top: 14px;
+        }
+        .json-card {
+            padding: 12px;
+        }
+        .json-title {
+            margin: 0 0 8px;
+            font-size: 0.95rem;
+            color: var(--muted);
+        }
+        textarea {
+            width: 100%;
+            height: 280px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 10px;
+            background: #fbf7ef;
+            color: #223228;
+            font-family: "Menlo", "Consolas", monospace;
+            font-size: 0.82rem;
+            line-height: 1.3;
+            resize: vertical;
+        }
+        @media (max-width: 900px) {
+            form { grid-template-columns: 1fr; }
+            .json-grid { grid-template-columns: 1fr; }
+            textarea { height: 220px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <h1>PDF Folder Browser</h1>
+        <p class="subtitle">Scan a folder of PDFs and inspect extracted corporate-action KPIs.</p>
+
+        <div class="card search-card">
+            <form method="post">
+                <input type="text" name="path" value="{{ path or '' }}" placeholder="/path/to/folder" required>
+                <button type="submit">Scan Folder</button>
+            </form>
+        </div>
+
+        {% if files %}
+        <h2 class="section-title">Extracted KPIs</h2>
+        <p class="meta">{{ files|length }} file(s) processed</p>
+        <div class="card table-wrap">
+            <table>
+                <tr>
+                    <th>#</th><th>doc_id</th><th>Document Type</th><th>Company</th><th>Ticker</th>
+                    <th>Dividend</th><th>Currency</th><th>Franking %</th>
+                    <th>Ex Date</th><th>Record Date</th><th>Payment Date</th><th>Announcement Date</th>
+                </tr>
+                {% for f in files %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ f.doc_id }}</td>
+                    {% if f.kpi %}
+                        <td>{{ f.kpi.document_type or '' }}</td>
+                        <td>{{ f.kpi.company_name.value if f.kpi.company_name else '' }}</td>
+                        <td>{{ f.kpi.ticker.value if f.kpi.ticker else '' }}</td>
+                        <td>{{ f.kpi.dividend_per_share.value if f.kpi.dividend_per_share else '' }}</td>
+                        <td>{{ f.kpi.currency.value if f.kpi.currency else '' }}</td>
+                        <td>{{ f.kpi.franking_percentage.value if f.kpi.franking_percentage else '' }}</td>
+                        <td>{{ f.kpi.ex_date.value if f.kpi.ex_date else '' }}</td>
+                        <td>{{ f.kpi.record_date.value if f.kpi.record_date else '' }}</td>
+                        <td>{{ f.kpi.payment_date.value if f.kpi.payment_date else '' }}</td>
+                        <td>{{ f.kpi.announcement_date.value if f.kpi.announcement_date else '' }}</td>
+                    {% else %}
+                        <td colspan="12"><em>{{ f.error or 'no data' }}</em></td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+
+        <div class="json-grid">
+            <div class="card json-card">
+                <h3 class="json-title">Raw JSON</h3>
+                <textarea readonly>{{ json_output }}</textarea>
+            </div>
+            <div class="card json-card">
+                <h3 class="json-title">Client JSON (formatted, no evidence)</h3>
+                <textarea readonly>{{ json_structured }}</textarea>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
