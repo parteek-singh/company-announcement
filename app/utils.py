@@ -2,7 +2,8 @@ import os
 import uuid
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-STORAGE_DIR = os.path.join(os.path.dirname(BASE_DIR), "storage")
+DEFAULT_STORAGE_DIR = os.path.join(os.path.dirname(BASE_DIR), "storage")
+STORAGE_DIR = os.path.abspath(os.getenv("STORAGE_ROOT", DEFAULT_STORAGE_DIR))
 
 PDF_DIR = os.path.join(STORAGE_DIR, "pdfs")
 RAW_DIR = os.path.join(STORAGE_DIR, "raw")

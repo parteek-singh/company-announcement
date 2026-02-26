@@ -49,14 +49,30 @@
             padding: 14px;
             margin-bottom: 18px;
         }
+        .stack {
+            display: grid;
+            gap: 10px;
+        }
         form {
             display: grid;
             grid-template-columns: 1fr auto;
             gap: 10px;
         }
+        .upload-form {
+            grid-template-columns: 1fr auto;
+        }
         input[type="text"] {
             width: 100%;
             border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 10px 12px;
+            background: #fffefb;
+            color: var(--ink);
+            font-size: 0.95rem;
+        }
+        input[type="file"] {
+            width: 100%;
+            border: 1px dashed var(--line);
             border-radius: 10px;
             padding: 10px 12px;
             background: #fffefb;
@@ -81,6 +97,22 @@
             margin: 0 0 10px;
             color: var(--muted);
             font-size: 0.9rem;
+        }
+        .hint {
+            margin: 2px 0 0;
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+        .result-box {
+            margin-top: 8px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #f7fbf8;
+            padding: 10px;
+            font-size: 0.9rem;
+            color: #1e3e34;
+            display: none;
+            white-space: pre-wrap;
         }
         .table-wrap {
             overflow-x: auto;
@@ -110,6 +142,13 @@
             grid-template-columns: 1fr 1fr;
             gap: 14px;
             margin-top: 14px;
+        }
+        .hidden { display: none; }
+        .live-section { margin-top: 18px; }
+        .empty-state {
+            margin-top: 10px;
+            color: var(--muted);
+            font-size: 0.9rem;
         }
         .json-card {
             padding: 12px;
@@ -145,10 +184,44 @@
         <p class="subtitle">Scan a folder of PDFs and inspect extracted corporate-action KPIs.</p>
 
         <div class="card search-card">
-            <form method="post">
-                <input type="text" name="path" value="{{ path or '' }}" placeholder="/path/to/folder" required>
-                <button type="submit">Scan Folder</button>
-            </form>
+            <div class="stack">
+                <form method="post">
+                    <input type="text" name="path" value="{{ path or '' }}" placeholder="/path/to/folder" required>
+                    <button type="submit">Scan Folder</button>
+                </form>
+                <p class="hint">In Docker, use a container path (example: <code>/data/pdfs</code>) and mount it with <code>-v "$(pwd)/resource:/data/pdfs"</code>.</p>
+
+                <form id="uploadForm" class="upload-form" enctype="multipart/form-data">
+                    <input type="file" name="file" accept=".pdf,application/pdf" required>
+                    <button type="submit">Upload PDF</button>
+                </form>
+                <p class="hint">Upload mode calls <code>/extract</code> directly (same flow as curl).</p>
+                <div id="uploadResult" class="result-box"></div>
+            </div>
+        </div>
+
+        <div id="liveOutput" class="live-section hidden">
+            <h2 class="section-title">Latest Extracted KPI</h2>
+            <div class="card table-wrap">
+                <table>
+                    <tr>
+                        <th>#</th><th>doc_id</th><th>Document Type</th><th>Company</th><th>Ticker</th>
+                        <th>Dividend</th><th>Currency</th><th>Franking %</th>
+                        <th>Ex Date</th><th>Record Date</th><th>Payment Date</th><th>Announcement Date</th>
+                    </tr>
+                    <tbody id="liveTableBody"></tbody>
+                </table>
+            </div>
+            <div class="json-grid">
+                <div class="card json-card">
+                    <h3 class="json-title">Raw JSON</h3>
+                    <textarea id="liveRawJson" readonly></textarea>
+                </div>
+                <div class="card json-card">
+                    <h3 class="json-title">Client JSON (formatted, no evidence)</h3>
+                    <textarea id="liveClientJson" readonly></textarea>
+                </div>
+            </div>
         </div>
 
         {% if files %}
@@ -195,6 +268,101 @@
             </div>
         </div>
         {% endif %}
+        {% if path and not files %}
+        <p class="empty-state">No PDF files found at this path from inside the container. For Docker, mount host folder and use container path.</p>
+        {% endif %}
     </div>
+    <script>
+        const uploadForm = document.getElementById("uploadForm");
+        const uploadResult = document.getElementById("uploadResult");
+        const liveOutput = document.getElementById("liveOutput");
+        const liveTableBody = document.getElementById("liveTableBody");
+        const liveRawJson = document.getElementById("liveRawJson");
+        const liveClientJson = document.getElementById("liveClientJson");
+
+        function inferDividendType(rawText) {
+            const t = (rawText || "").toLowerCase();
+            if (t.includes("part 3a - ordinary dividend") || t.includes("ordinary dividend")) return "ORDINARY";
+            if (t.includes("part 3b - interim dividend") || t.includes("interim")) return "INTERIM";
+            if (t.includes("part 3c - special dividend") || t.includes("special")) return "SPECIAL";
+            if (t.includes("part 3d - final dividend") || t.includes("final")) return "FINAL";
+            return null;
+        }
+
+        if (uploadForm) {
+            uploadForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const formData = new FormData(uploadForm);
+                uploadResult.style.display = "block";
+                uploadResult.textContent = "Uploading...";
+
+                try {
+                    const res = await fetch("/extract", { method: "POST", body: formData });
+                    const data = await res.json();
+                    if (!res.ok) {
+                        uploadResult.textContent = "Upload failed: " + (data.detail || res.statusText);
+                        return;
+                    }
+                    const docId = data.doc_id;
+                    const [resultRes, rawRes] = await Promise.all([
+                        fetch("/result/" + docId),
+                        fetch("/raw/" + docId)
+                    ]);
+                    const resultJson = await resultRes.json();
+                    const rawJson = await rawRes.json();
+
+                    const fullText = (rawJson.pages || []).map(p => p.text || "").join("\n");
+                    const clientJson = {
+                        document_id: docId,
+                        document_type: resultJson.document_type || null,
+                        company: {
+                            name: resultJson.company_name?.value || null,
+                            ticker: resultJson.ticker?.value || null,
+                            isin: resultJson.isin?.value || null
+                        },
+                        action_details: {
+                            dividend_type: inferDividendType(fullText),
+                            dividend_per_share: resultJson.dividend_per_share?.value || null,
+                            currency: resultJson.currency?.value || null,
+                            franking_percentage: resultJson.franking_percentage?.value || null
+                        },
+                        important_dates: {
+                            announcement_date: resultJson.announcement_date?.value || null,
+                            ex_date: resultJson.ex_date?.value || null,
+                            record_date: resultJson.record_date?.value || null,
+                            payment_date: resultJson.payment_date?.value || null
+                        }
+                    };
+
+                    liveTableBody.innerHTML = `
+                        <tr>
+                            <td>1</td>
+                            <td>${docId}</td>
+                            <td>${resultJson.document_type || ""}</td>
+                            <td>${resultJson.company_name?.value || ""}</td>
+                            <td>${resultJson.ticker?.value || ""}</td>
+                            <td>${resultJson.dividend_per_share?.value ?? ""}</td>
+                            <td>${resultJson.currency?.value || ""}</td>
+                            <td>${resultJson.franking_percentage?.value ?? ""}</td>
+                            <td>${resultJson.ex_date?.value || ""}</td>
+                            <td>${resultJson.record_date?.value || ""}</td>
+                            <td>${resultJson.payment_date?.value || ""}</td>
+                            <td>${resultJson.announcement_date?.value || ""}</td>
+                        </tr>`;
+                    liveRawJson.value = JSON.stringify(resultJson, null, 2);
+                    liveClientJson.value = JSON.stringify(clientJson, null, 2);
+                    liveOutput.classList.remove("hidden");
+
+                    uploadResult.textContent =
+                        "Upload complete\n" +
+                        "doc_id: " + docId + "\n" +
+                        "View result: /result/" + docId + "\n" +
+                        "View raw: /raw/" + docId;
+                } catch (err) {
+                    uploadResult.textContent = "Request failed: " + err;
+                }
+            });
+        }
+    </script>
 </body>
 </html>
